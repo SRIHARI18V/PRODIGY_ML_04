@@ -1,0 +1,68 @@
+import os
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report
+
+
+def load_data_from_flat_folder(folder_path, img_size=(64, 64)):
+    X, y = [], []
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+
+        if not filename.endswith(('.jpg', '.png', '.jpeg')):
+            continue
+
+        try:
+            label = int(filename[0])
+            
+            img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
+            if img is None:
+                continue
+            img = cv2.resize(img, img_size)
+            X.append(img.flatten())
+            y.append(label)
+        except Exception as e:
+            print("Skipping:", file_path, "| Error:", e)
+            continue
+    return np.array(X), np.array(y)
+
+folder_path =r"C:\Users\SRI HARI\Downloads\prodigy projects\gesture_small"
+X, y = load_data_from_flat_folder(folder_path, img_size=(64, 64))
+print("Loaded samples:", len(X))
+print("Labels found:", set(y))
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+
+
+model = SVC(kernel='rbf')
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print(classification_report(y_test, y_pred))
+
+def visualize_predictions(X_test, y_test, y_pred, img_size=(64, 64), num_samples=6):
+    plt.figure(figsize=(12, 6))
+    indices = np.random.choice(len(X_test), num_samples, replace=False)
+    for i, idx in enumerate(indices):
+        img = X_test[idx].reshape(img_size)
+        actual = y_test[idx]
+        predicted = y_pred[idx]
+        color = 'green' if actual == predicted else 'red'
+
+        plt.subplot(2, 3, i + 1)
+        plt.imshow(img, cmap='gray')
+        plt.title(f"Actual: {actual} | Pred: {predicted}", color=color)
+        plt.axis("off")
+
+    plt.tight_layout()
+    plt.savefig("Predictions.png")
+    plt.show()
+
+visualize_predictions(X_test, y_test, y_pred)
